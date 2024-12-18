@@ -1,5 +1,5 @@
 import { accountService } from './services/accountService.js';
-import { sessionManager } from './services/sessionManager.js';
+import { sessionManager } from './services/sessionManagerInstance.js'; // Updated import path
 import { cookieManager } from './utils/cookie/cookieManager.js';
 import { analyticsService } from './services/analyticsService.js';
 import { ui } from './utils/ui.js';

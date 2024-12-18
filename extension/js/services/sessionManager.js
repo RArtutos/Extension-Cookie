@@ -4,7 +4,7 @@ import { httpClient } from '../utils/httpClient.js';
 import { cookieManager } from '../utils/cookie/cookieManager.js';
 import { analyticsService } from './analyticsService.js';
 
-class SessionManager {
+export class SessionManager {
   constructor() {
     this.activeTimers = new Map();
     this.pollInterval = null;
@@ -12,16 +12,9 @@ class SessionManager {
   }
 
   initializeSessionCleanup() {
-    // Limpiar sesiones al cerrar el navegador
+    // Solo limpiar al cerrar el navegador
     chrome.runtime.onSuspend.addListener(() => {
       this.cleanupCurrentSession();
-    });
-
-    // Monitorear cambios de pestañas para detectar salida del dominio
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-      if (changeInfo.url) {
-        this.handleDomainChange(new URL(changeInfo.url).hostname);
-      }
     });
   }
 
@@ -61,20 +54,11 @@ class SessionManager {
     }
   }
 
-  async handleDomainChange(newDomain) {
-    const currentAccount = await storage.get('currentAccount');
-    if (!currentAccount) return;
-
-    const accountDomain = this.getAccountDomain(currentAccount);
-    if (!newDomain.includes(accountDomain)) {
-      await this.cleanupCurrentSession();
-    }
-  }
-
-  getAccountDomain(account) {
-    if (!account?.cookies?.length) return '';
-    const domain = account.cookies[0].domain;
-    return domain.startsWith('.') ? domain.substring(1) : domain;
+  clearAllTimers() {
+    this.activeTimers.forEach(timer => {
+      if (timer) clearTimeout(timer);
+    });
+    this.activeTimers.clear();
   }
 
   async cleanupCurrentSession() {
@@ -82,9 +66,6 @@ class SessionManager {
       const currentAccount = await storage.get('currentAccount');
       if (!currentAccount) return;
 
-      // Limpiar cookies
-      await cookieManager.removeAccountCookies(currentAccount);
-      
       // Finalizar sesión en el backend
       await this.endSession(currentAccount.id);
       
@@ -99,11 +80,6 @@ class SessionManager {
     } catch (error) {
       console.error('Error cleaning up session:', error);
     }
-  }
-
-  clearAllTimers() {
-    this.activeTimers.forEach(timer => clearTimeout(timer));
-    this.activeTimers.clear();
   }
 
   async startSession(accountId, domain) {
@@ -136,6 +112,10 @@ class SessionManager {
       return false;
     }
   }
-}
 
-export const sessionManager = new SessionManager();
+  getAccountDomain(account) {
+    if (!account?.cookies?.length) return '';
+    const domain = account.cookies[0].domain;
+    return domain.startsWith('.') ? domain.substring(1) : domain;
+  }
+}
