@@ -16,65 +16,125 @@ const cookieManager = {
 
   setupEventListeners() {
     // Listener para manejar pestañas cerradas
-    chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-      this.handleTabClose(tabId);
+    chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
+      await this.handleTabClose(tabId, removeInfo);
     });
 
-    // Listener para limpiar todas las cookies al cerrar Chrome
+    // Múltiples listeners para asegurar la limpieza al cerrar
     chrome.runtime.onSuspend.addListener(() => {
       this.cleanupAllCookies();
     });
-  },
 
-  handleTabClose(tabId) {
-    // Verifica el dominio asociado a la pestaña cerrada
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError || !tab?.url) return;
+    chrome.windows.onRemoved.addListener((windowId) => {
+      chrome.windows.getAll((windows) => {
+        if (windows.length === 0) {
+          this.cleanupAllCookies();
+        }
+      });
+    });
 
-      const domain = new URL(tab.url).hostname;
-      this.checkAndCleanupDomain(domain);
+    // Listener adicional para cambios de estado de ventana
+    chrome.windows.onFocusChanged.addListener((windowId) => {
+      if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        this.cleanupAllCookies();
+      }
     });
   },
 
-  checkAndCleanupDomain(domain) {
-    // Verifica si el dominio está gestionado
-    const matchingDomain = Array.from(this.managedDomains).find((managed) =>
-      domain.endsWith(managed.replace(/^\./, ''))
-    );
-
-    if (matchingDomain) {
-      // Revisa si quedan pestañas abiertas para este dominio
-      chrome.tabs.query({ url: `*://*.${matchingDomain}/*` }, (tabs) => {
-        if (tabs.length === 0) {
-          this.removeCookiesForDomain(matchingDomain);
-        }
-      });
+  async handleTabClose(tabId, removeInfo) {
+    try {
+      // Obtener todas las pestañas antes del cierre
+      const allTabs = await chrome.tabs.query({});
+      
+      // Buscar la pestaña que se está cerrando en el historial reciente
+      const closedTab = allTabs.find(tab => tab.id === tabId);
+      
+      if (closedTab?.url) {
+        const domain = new URL(closedTab.url).hostname;
+        await this.checkAndCleanupDomain(domain);
+      }
+    } catch (error) {
+      console.log('Error handling tab close:', error);
     }
   },
 
-  removeCookiesForDomain(domain) {
+  async checkAndCleanupDomain(domain) {
+    if (!domain) return;
+
+    // Encuentra el dominio gestionado que coincide
+    const matchingDomain = Array.from(this.managedDomains).find(managed => {
+      const cleanManaged = managed.replace(/^\./, '');
+      return domain === cleanManaged || domain.endsWith('.' + cleanManaged);
+    });
+
+    if (matchingDomain) {
+      try {
+        // Busca pestañas abiertas con el mismo dominio
+        const tabs = await chrome.tabs.query({});
+        const hasOpenTabs = tabs.some(tab => {
+          try {
+            const tabDomain = new URL(tab.url).hostname;
+            return tabDomain === domain || tabDomain.endsWith('.' + matchingDomain.replace(/^\./, ''));
+          } catch {
+            return false;
+          }
+        });
+
+        if (!hasOpenTabs) {
+          await this.removeCookiesForDomain(matchingDomain);
+          console.log(`Cookies removed for domain: ${matchingDomain}`);
+        }
+      } catch (error) {
+        console.error('Error checking domain:', error);
+      }
+    }
+  },
+
+  async removeCookiesForDomain(domain) {
     const cleanDomain = domain.startsWith('.') ? domain.substring(1) : domain;
 
-    chrome.cookies.getAll({ domain: cleanDomain }, (cookies) => {
-      cookies.forEach((cookie) => {
+    try {
+      // Obtener todas las cookies del dominio
+      const cookies = await chrome.cookies.getAll({ domain: cleanDomain });
+      
+      // Eliminar cada cookie
+      for (const cookie of cookies) {
         const protocol = cookie.secure ? 'https://' : 'http://';
         const cookieUrl = `${protocol}${cookie.domain}${cookie.path}`;
-        chrome.cookies.remove({ url: cookieUrl, name: cookie.name });
-      });
-    });
+        
+        try {
+          await chrome.cookies.remove({
+            url: cookieUrl,
+            name: cookie.name,
+            storeId: cookie.storeId
+          });
+          console.log(`Removed cookie: ${cookie.name} from ${cookieUrl}`);
+        } catch (error) {
+          console.error(`Error removing cookie ${cookie.name}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error(`Error removing cookies for domain ${domain}:`, error);
+    }
   },
 
-  cleanupAllCookies() {
-    // Limpia todas las cookies de los dominios gestionados
-    this.managedDomains.forEach((domain) => {
-      this.removeCookiesForDomain(domain);
-    });
-    chrome.storage.local.remove('managedDomains');
-    this.managedDomains.clear();
-  },
+  async cleanupAllCookies() {
+    console.log('Cleaning up all cookies...');
+    try {
+      const domains = Array.from(this.managedDomains);
+      for (const domain of domains) {
+        await this.removeCookiesForDomain(domain);
+      }
+      await chrome.storage.local.remove('managedDomains');
+      this.managedDomains.clear();
+      console.log('All cookies cleaned successfully');
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    }
+  }
 };
 
-// Manejador de mensajes para configurar dominios gestionados
+// Manejador de mensajes
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case 'SET_MANAGED_DOMAINS':
@@ -82,6 +142,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.storage.local.set({
         managedDomains: Array.from(cookieManager.managedDomains),
       });
+      console.log('Managed domains updated:', cookieManager.managedDomains);
       sendResponse({ success: true });
       return true;
 
@@ -91,13 +152,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
       return true;
   }
-});
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === 'TEST_MESSAGE') {
-        console.log('Test message received in background.js');
-        sendResponse({ success: true, message: 'Message handled!' });
-    }
 });
 
 // Inicializar el gestor de cookies
