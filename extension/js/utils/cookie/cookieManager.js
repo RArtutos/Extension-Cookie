@@ -24,7 +24,16 @@ class CookieManager {
           if (cookie.value.startsWith('###')) {
             await this.setStorageData(domain, cookie.value.substring(3));
           } else if (cookie.name === 'header_cookies') {
-            await this.setHeaderCookies(domain, cookie.value);
+            // Intentar parsear como JSON primero
+            try {
+              const cookiesArray = JSON.parse(cookie.value);
+              for (const cookieObj of cookiesArray) {
+                await this.setCookie(cookieObj.domain || domain, cookieObj.name, cookieObj.value);
+              }
+            } catch (jsonError) {
+              // Si falla el parse JSON, tratar como string de cookies
+              await this.setHeaderCookies(domain, cookie.value);
+            }
           } else {
             await this.setCookie(domain, cookie.name, cookie.value);
           }
@@ -201,17 +210,27 @@ class CookieManager {
   parseHeaderString(cookieString) {
     if (!cookieString) return [];
     
-    const cookies = [];
-    const pairs = cookieString.split(';');
-    
-    for (const pair of pairs) {
-      const [name, value] = pair.trim().split('=');
-      if (name && value) {
-        cookies.push({ name: name.trim(), value: value.trim() });
+    // Intentar parsear como JSON primero
+    try {
+      const cookiesArray = JSON.parse(cookieString);
+      return cookiesArray.map(cookie => ({
+        name: cookie.name,
+        value: cookie.value
+      }));
+    } catch (error) {
+      // Si falla el parse JSON, procesar como string de cookies
+      const cookies = [];
+      const pairs = cookieString.split(';');
+      
+      for (const pair of pairs) {
+        const [name, value] = pair.trim().split('=');
+        if (name && value) {
+          cookies.push({ name: name.trim(), value: value.trim() });
+        }
       }
+      
+      return cookies;
     }
-    
-    return cookies;
   }
 
   async removeAccountCookies(account) {
