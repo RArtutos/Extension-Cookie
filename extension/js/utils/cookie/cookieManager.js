@@ -22,7 +22,7 @@ class CookieManager {
         
         if (cookie.value.startsWith('###')) {
           const storageData = cookie.value.substring(3);
-          await this.injectStorageScript(domain, storageData);
+          await this.setStorageData(domain, storageData);
         }
       }
 
@@ -39,62 +39,107 @@ class CookieManager {
     }
   }
 
-  async injectStorageScript(domain, storageData) {
+  async setStorageData(domain, storageDataStr) {
     try {
-      // Crear nueva pestaña sin cargar la página
-      const tab = await chrome.tabs.create({
-        url: `https://${domain}`,
-        active: false
-      });
+      const storageData = JSON.parse(storageDataStr);
+      const cleanDomain = domain.startsWith('.') ? domain.substring(1) : domain;
 
-      // Esperar a que la pestaña esté lista
-      await new Promise(resolve => {
-        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-          if (tabId === tab.id && info.status === 'loading') {
-            chrome.tabs.onUpdated.removeListener(listener);
-            resolve();
+      // Función para inyectar el storage
+      const injectStorage = async (tabId) => {
+        // Primero inyectamos una función helper
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          func: function() {
+            window.__storageInjected = false;
+            window.__injectStorage = function(data) {
+              try {
+                if (data.local) {
+                  Object.keys(data.local).forEach(key => {
+                    localStorage.setItem(key, data.local[key]);
+                  });
+                }
+                if (data.session) {
+                  Object.keys(data.session).forEach(key => {
+                    sessionStorage.setItem(key, data.session[key]);
+                  });
+                }
+                window.__storageInjected = true;
+                return true;
+              } catch (e) {
+                console.error('Error injecting storage:', e);
+                return false;
+              }
+            };
           }
         });
-      });
 
-      // Inyectar el script antes de que cargue cualquier cosa
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: (data) => {
-          try {
-            const storageData = JSON.parse(data);
-            
-            if (storageData.local) {
-              Object.keys(storageData.local).forEach(key => {
-                try {
-                  localStorage.setItem(key, storageData.local[key]);
-                } catch (e) {
-                  console.error('Error setting localStorage:', e);
-                }
-              });
-            }
-            
-            if (storageData.session) {
-              Object.keys(storageData.session).forEach(key => {
-                try {
-                  sessionStorage.setItem(key, storageData.session[key]);
-                } catch (e) {
-                  console.error('Error setting sessionStorage:', e);
-                }
-              });
-            }
-          } catch (e) {
-            console.error('Error processing storage data:', e);
+        // Luego inyectamos los datos
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          func: function(storageData) {
+            return window.__injectStorage(storageData);
+          },
+          args: [storageData]
+        });
+
+        // Verificamos que se haya inyectado correctamente
+        const results = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => window.__storageInjected
+        });
+
+        return results[0]?.result === true;
+      };
+
+      // Buscar pestañas existentes
+      const tabs = await chrome.tabs.query({url: `*://*.${cleanDomain}/*`});
+      
+      if (tabs.length > 0) {
+        // Actualizar pestañas existentes
+        for (const tab of tabs) {
+          const success = await injectStorage(tab.id);
+          if (!success) {
+            console.warn(`Failed to inject storage in tab ${tab.id}`);
           }
-        },
-        args: [storageData]
-      });
+        }
+      } else {
+        // Crear pestaña temporal
+        const tab = await chrome.tabs.create({
+          url: `https://${cleanDomain}`,
+          active: false
+        });
 
-      // Cerrar la pestaña temporal
-      await chrome.tabs.remove(tab.id);
+        // Esperar a que la página esté completamente cargada
+        await new Promise(resolve => {
+          const listener = (tabId, info) => {
+            if (tabId === tab.id && info.status === 'complete') {
+              chrome.tabs.onUpdated.removeListener(listener);
+              resolve();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+        });
+
+        // Intentar inyectar el storage varias veces
+        let success = false;
+        for (let i = 0; i < 3 && !success; i++) {
+          success = await injectStorage(tab.id);
+          if (!success) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+
+        // Cerrar la pestaña temporal
+        await chrome.tabs.remove(tab.id);
+
+        if (!success) {
+          throw new Error('Failed to inject storage after multiple attempts');
+        }
+      }
 
     } catch (error) {
-      console.error('Error injecting storage script:', error);
+      console.error('Error setting storage data:', error);
+      throw error;
     }
   }
 
