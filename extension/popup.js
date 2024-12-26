@@ -1,4 +1,4 @@
-import { API_URL, STORAGE_KEYS, UI_CONFIG } from './js/config.js';
+import { API_URL, STORAGE_KEYS, UI_CONFIG, USER_EMAIL} from './js/config.js';
 import { storage } from './js/utils/storage.js';
 import { ui } from './js/utils/ui.js';
 import { accountManager } from './js/accountManager.js';
@@ -35,7 +35,26 @@ class PopupManager {
   async checkAuthState() {
     const token = await storage.get(STORAGE_KEYS.TOKEN);
     if (token) {
-      await this.showAccountManager();
+      // Validar el token antes de mostrar el account manager
+      try {
+        const response = await fetch(`${API_URL}/api/auth/validate`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          await this.showAccountManager();
+        } else {
+          // Si el token no es válido, forzar logout
+          await this.handleLogout();
+          ui.showLoginForm();
+        }
+      } catch (error) {
+        console.error('Token validation failed:', error);
+        await this.handleLogout();
+        ui.showLoginForm();
+      }
     } else {
       ui.showLoginForm();
     }
@@ -69,6 +88,12 @@ class PopupManager {
       }
 
       await storage.set(STORAGE_KEYS.TOKEN, data.access_token);
+      await storage.set(STORAGE_KEYS.USER_EMAIL, email);
+
+      chrome.storage.local.set({ userEmail: email }, function() {
+          console.log('Email saved:', email);
+      });
+
       await this.showAccountManager();
       ui.showSuccess('Login successful');
     } catch (error) {
@@ -79,21 +104,51 @@ class PopupManager {
 
   async handleLogout() {
     try {
-      // Clear current account cookies
+      // Obtener token y email antes de limpiar el storage
+      const token = await storage.get(STORAGE_KEYS.TOKEN);
+      const email = await storage.get(STORAGE_KEYS.USER_EMAIL);
       const currentAccount = await storage.get(STORAGE_KEYS.CURRENT_ACCOUNT);
-      if (currentAccount) {
-        await cookieService.removeAllCookies(currentAccount.domain);
+
+      if (currentAccount && email && token) {
+        // Obtener el dominio de la cuenta actual
+        const domain = this.getDomain(currentAccount);
+        
+        if (domain) {
+          try {
+            // Enviar solicitud DELETE antes de limpiar cookies y storage
+            const response = await fetch(
+              `${API_URL}/delete/sessions?email=${encodeURIComponent(email)}&domain=${encodeURIComponent(domain)}`,
+              {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+
+            if (!response.ok) {
+              console.error('Error in DELETE request:', response.status);
+            }
+          } catch (error) {
+            console.error('Error sending DELETE request:', error);
+          }
+        }
+
+        // Limpiar cookies después del DELETE request
+        await cookieService.removeAllCookies(domain);
       }
 
-      // Clear storage
+      // Limpiar storage después de todo
       await storage.remove([
         STORAGE_KEYS.TOKEN,
         STORAGE_KEYS.CURRENT_ACCOUNT,
         STORAGE_KEYS.PROXY_ENABLED,
-        STORAGE_KEYS.USER_SETTINGS
+        STORAGE_KEYS.USER_SETTINGS,
+        STORAGE_KEYS.USER_EMAIL
       ]);
 
-      // Stop refresh interval
+      // Detener el intervalo de actualización
       if (this.refreshInterval) {
         clearInterval(this.refreshInterval);
         this.refreshInterval = null;
@@ -105,6 +160,12 @@ class PopupManager {
       console.error('Logout failed:', error);
       ui.showError('Error during logout');
     }
+  }
+
+  getDomain(account) {
+    if (!account?.cookies?.length) return '';
+    const domain = account.cookies[0].domain;
+    return domain.startsWith('.') ? domain.substring(1) : domain;
   }
 
   async handleProxyToggle(event) {

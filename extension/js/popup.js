@@ -5,6 +5,7 @@ import { ui } from './utils/ui.js';
 class PopupManager {
   constructor() {
     this.initialized = false;
+    this.accounts = [];
   }
 
   async init() {
@@ -25,6 +26,19 @@ class PopupManager {
     }
     
     document.getElementById('logout-btn')?.addEventListener('click', () => this.handleLogout());
+    document.getElementById('search-accounts')?.addEventListener('input', (e) => this.handleSearch(e.target.value));
+  }
+
+  handleSearch(query) {
+    const normalizedQuery = query.toLowerCase().trim();
+    const filteredAccounts = this.accounts.filter(account => {
+      const nameMatch = account.name.toLowerCase().includes(normalizedQuery);
+      const groupMatch = account.group?.toLowerCase().includes(normalizedQuery);
+      return nameMatch || groupMatch;
+    });
+    
+    const currentAccount = accountService.getCurrentAccount();
+    ui.updateAccountsList(filteredAccounts, currentAccount);
   }
 
   async checkAuthState() {
@@ -68,9 +82,9 @@ class PopupManager {
   async loadAccounts() {
     try {
       ui.showAccountManager();
-      const accounts = await accountService.getAccounts();
+      this.accounts = await accountService.getAccounts();
       const currentAccount = await accountService.getCurrentAccount();
-      ui.updateAccountsList(accounts, currentAccount);
+      ui.updateAccountsList(this.accounts, currentAccount);
     } catch (error) {
       ui.showError('Failed to load accounts');
     }

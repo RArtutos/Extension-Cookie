@@ -1,4 +1,4 @@
-export const API_URL = 'https://api.artutos.us.kg';
+export const API_URL = 'https://api.repelisplus.edu.eu.org';
 
 export const SESSION_CONFIG = {
   INACTIVITY_TIMEOUT: 60000, // 1 minute
@@ -14,7 +14,8 @@ export const ANALYTICS_CONFIG = {
 export const STORAGE_KEYS = {
   TOKEN: 'token',
   CURRENT_ACCOUNT: 'currentAccount',
-  USER_DATA: 'userData'
+  USER_DATA: 'userData',
+  EMAIL: 'email' // Definir el email
 };
 
 export const UI_CONFIG = {

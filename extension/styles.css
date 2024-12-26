@@ -21,16 +21,57 @@ body {
     padding: 16px;
 }
 
-/* Login Form */
+/* Login Container */
+.login-container {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.login-form {
+    margin-top: 24px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Logo and Header */
 .logo {
     text-align: center;
     margin-bottom: 24px;
 }
 
-.logo img {
+.logo-img {
     width: 64px;
     height: 64px;
     margin-bottom: 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .logo h1 {
@@ -39,47 +80,70 @@ body {
     margin: 0;
 }
 
-.form-group {
+.header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 16px;
 }
 
-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
+.header-logo {
+    width: 32px;
+    height: 32px;
     border-radius: 6px;
+}
+
+/* Search Bar */
+.search-bar {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 10px 36px 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     font-size: 14px;
+    background-color: white;
     transition: all 0.2s;
 }
 
-input:focus {
+.search-bar input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Account Manager */
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--secondary-color);
+    pointer-events: none;
 }
 
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.search-bar {
-    margin-bottom: 16px;
-}
-
+/* Account List */
 .accounts-container {
     max-height: 400px;
     overflow-y: auto;
     margin-bottom: 16px;
+    padding: 4px;
+}
+
+.accounts-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.accounts-container::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: 3px;
+}
+
+.accounts-container::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border-radius: 3px;
 }
 
 .account-item {
@@ -97,6 +161,7 @@ input:focus {
 .account-item:hover {
     border-color: var(--primary-color);
     transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .account-item.active {
@@ -104,16 +169,58 @@ input:focus {
     border-color: var(--primary-color);
 }
 
+.account-item.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .account-info {
     flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.account-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: cover;
+    background-color: var(--background-color);
+    flex-shrink: 0;
+}
+
+.account-icon.default {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.account-details {
+    flex: 1;
+    min-width: 0;
 }
 
 .account-name {
     font-weight: 500;
     color: var(--text-primary);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.account-status {
+.account-group {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.session-info {
     font-size: 12px;
     color: var(--text-secondary);
 }
@@ -124,15 +231,17 @@ input:focus {
     color: white;
     border: none;
     border-radius: 6px;
-    padding: 8px 16px;
+    padding: 12px 16px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
     width: 100%;
+    font-size: 14px;
 }
 
 .btn-primary:hover {
     background-color: #2563eb;
+    transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -148,6 +257,29 @@ input:focus {
 
 .btn-secondary:hover {
     background-color: var(--background-color);
+    border-color: var(--secondary-color);
+}
+
+.switch-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.switch-btn:hover:not(:disabled) {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+.switch-btn:disabled {
+    background-color: var(--secondary-color);
+    cursor: not-allowed;
 }
 
 /* Footer */
@@ -155,7 +287,7 @@ input:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 8px;
+    padding-top: 12px;
     border-top: 1px solid var(--border-color);
 }
 
@@ -176,10 +308,44 @@ input:focus {
     background-color: var(--danger-color);
 }
 
+/* Messages */
+.error-message, .success-message {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    animation: slideDown 0.3s ease-out;
+    z-index: 1000;
+}
+
+.error-message {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.success-message {
+    background-color: var(--success-color);
+    color: white;
+}
+
 /* Animations */
+@keyframes slideDown {
+    from { 
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .fade-in {

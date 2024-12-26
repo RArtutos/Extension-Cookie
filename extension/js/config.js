@@ -1,5 +1,5 @@
 // API configuration
-export const API_URL = 'https://api.artutos.us.kg';  // Update this to match your backend URL
+export const API_URL = 'https://api.repelisplus.edu.eu.org';  // Update this to match your backend URL
 
 // Session configuration
 export const SESSION_CONFIG = {
@@ -18,7 +18,8 @@ export const UI_CONFIG = {
 export const STORAGE_KEYS = {
   TOKEN: 'token',
   CURRENT_ACCOUNT: 'currentAccount',
-  USER_DATA: 'userData'
+  USER_DATA: 'userData',
+  USER_EMAIL: 'userEmail' // Agregar la clave userEmail
 };
 
 // Analytics configuration

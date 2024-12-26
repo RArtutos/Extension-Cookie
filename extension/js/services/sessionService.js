@@ -10,11 +10,14 @@ class SessionService {
 
   async startSession(accountId, domain) {
     try {
-      // Check session limits first
-      const sessionInfo = await this.getSessionInfo(accountId);
-      if (sessionInfo.active_sessions >= sessionInfo.max_concurrent_users) {
-        throw new Error(`Maximum concurrent users (${sessionInfo.max_concurrent_users}) reached`);
-      }
+      // Incrementar usuarios activos
+      await httpClient.post(`/api/accounts/${accountId}/active`);
+      
+      // Crear sesión
+      await httpClient.post('/api/sessions', {
+        account_id: accountId,
+        domain: domain
+      });
 
       // Track session start
       await analyticsService.trackSessionStart(accountId, domain);
@@ -26,24 +29,14 @@ class SessionService {
     }
   }
 
-  async updateSession(accountId, domain) {
-    try {
-      // Solo verificamos el estado de la sesión
-      const sessionInfo = await this.getSessionInfo(accountId);
-      if (sessionInfo.active_sessions <= sessionInfo.max_concurrent_users) {
-        await analyticsService.trackPageView(domain);
-        this.startInactivityTimer(domain, accountId);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error updating session:', error);
-      return false;
-    }
-  }
-
   async endSession(accountId, domain) {
     try {
+      // Decrementar usuarios activos
+      await httpClient.delete(`/api/accounts/${accountId}/active`);
+      
+      // Finalizar sesión
+      await httpClient.delete(`/api/sessions/${accountId}`);
+      
       await analyticsService.trackSessionEnd(accountId, domain);
       this.clearInactivityTimer(domain);
       return true;

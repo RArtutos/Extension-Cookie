@@ -9,30 +9,37 @@
     <div id="app">
         <!-- Login Form -->
         <div id="login-form" class="container">
-            <div class="logo">
-                <img src="icons/logo.png" alt="Logo">
-                <h1>Account Manager</h1>
+            <div class="login-container">
+                <div class="logo">
+                    <img src="icono.png" alt="Logo" class="logo-img">
+                    <h1>Account Manager</h1>
+                </div>
+                <form id="login-form" class="login-form">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" id="login-btn" class="btn-primary">Sign In</button>
+                </form>
             </div>
-            <form id="login-form">
-                <div class="form-group">
-                    <input type="email" id="email" placeholder="Email" required>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="password" placeholder="Password" required>
-                </div>
-                <button type="submit" id="login-btn" class="btn-primary">Login</button>
-            </form>
         </div>
         
         <!-- Account Manager -->
         <div id="account-manager" class="container hidden">
             <div class="header">
-                <h2>Accounts</h2>
-                <button id="logout-btn" class="btn-secondary">Logout</button>
-            </div>
-            
-            <div class="search-bar">
-                <input type="text" id="search-accounts" placeholder="Search accounts...">
+                <div class="header-top">
+                    <img src="icono.png" alt="Logo" class="header-logo">
+                    <h2>Accounts</h2>
+                    <button id="logout-btn" class="btn-secondary">Logout</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="search-accounts" placeholder="Search accounts...">
+                    <div class="search-icon">🔍</div>
+                </div>
             </div>
             
             <div id="accounts-list" class="accounts-container"></div>

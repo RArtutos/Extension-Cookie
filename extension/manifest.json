@@ -14,9 +14,16 @@
     "https://*/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": "icono.png"
+  },
+  "icons": {
+    "16": "icono.png",
+    "48": "icono.png",
+    "128": "icono.png"
   }
 }

@@ -16,15 +16,28 @@ class UI {
     const accountsList = document.getElementById('accounts-list');
     accountsList.innerHTML = accounts.map(account => {
       const isActive = currentAccount && currentAccount.id === account.id;
-      const isDisabled = account.active_sessions >= account.max_concurrent_users && !isActive;
+      const isDisabled = account.active_users >= account.max_concurrent_users && !isActive;
+      
+      // Crear el contenido del icono
+      let iconContent;
+      if (account.image_url) {
+        iconContent = `<img src="${account.image_url}" alt="${account.name}" class="account-icon">`;
+      } else {
+        // Si no hay imagen, usar la primera letra del nombre como icono
+        const initial = account.name.charAt(0).toUpperCase();
+        iconContent = `<div class="account-icon default">${initial}</div>`;
+      }
       
       return `
         <div class="account-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}">
           <div class="account-info">
-            <div class="account-name">${account.name}</div>
-            ${account.group ? `<div class="account-group">${account.group}</div>` : ''}
-            <div class="session-info">
-              ${account.active_sessions || 0}/${account.max_concurrent_users || 1} users
+            ${iconContent}
+            <div class="account-details">
+              <div class="account-name">${account.name}</div>
+              ${account.group ? `<div class="account-group">${account.group}</div>` : ''}
+              <div class="session-info">
+                ${account.active_users}/${account.max_concurrent_users} users
+              </div>
             </div>
           </div>
           <button class="switch-btn" 
