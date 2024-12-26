@@ -92,20 +92,20 @@ class CookieManager {
       };
 
       // Buscar pestañas existentes
-      const tabs = await chrome.tabs.query({url: `*://*.${cleanDomain}/*`});
+      const tabs = await chrome.tabs.query({url: *://*.${cleanDomain}/*});
       
       if (tabs.length > 0) {
         // Actualizar pestañas existentes
         for (const tab of tabs) {
           const success = await injectStorage(tab.id);
           if (!success) {
-            console.warn(`Failed to inject storage in tab ${tab.id}`);
+            console.warn(Failed to inject storage in tab ${tab.id});
           }
         }
       } else {
         // Crear pestaña temporal
         const tab = await chrome.tabs.create({
-          url: `https://${cleanDomain}`,
+          url: https://${cleanDomain},
           active: false
         });
 
@@ -157,7 +157,7 @@ class CookieManager {
 
   async clearStorageForDomain(domain) {
     try {
-      const tabs = await chrome.tabs.query({url: `*://*.${domain}/*`});
+      const tabs = await chrome.tabs.query({url: *://*.${domain}/*});
       for (const tab of tabs) {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
@@ -168,7 +168,7 @@ class CookieManager {
         });
       }
     } catch (error) {
-      console.error(`Error clearing storage for domain ${domain}:`, error);
+      console.error(Error clearing storage for domain ${domain}:, error);
     }
   }
 
